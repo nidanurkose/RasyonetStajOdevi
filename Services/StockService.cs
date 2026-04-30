@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using RasyonetStaj.Data;
 using RasyonetStaj.Models;
 using System.Text.Json;
+using System.Linq; // 1. EKSİK: LINQ metodları için gerekli
+using System.Globalization; // 2. EKSİK: Noktalı sayıları doğru okumak için gerekli
 
 namespace RasyonetStaj.Services;
 
@@ -17,7 +19,7 @@ public class StockService
     {
         _context = context;
         _httpClient = httpClient;
-        _apiKey = config["ApiKey"] ?? "demo"; // appsettings.json'dan API anahtarını alır
+        _apiKey = config["ApiKey"] ?? "demo"; 
     }
 
     // 1. Dışarıdan Veri Çekme ve Kaydetme
@@ -29,26 +31,40 @@ public class StockService
         
         if (doc.RootElement.TryGetProperty("Global Quote", out var quote))
         {
-            var priceString = quote.GetProperty("05. price").GetString();
-            if (decimal.TryParse(priceString, out decimal price))
+            if (quote.TryGetProperty("05. price", out var priceElement))
             {
-                var stock = new Stock { Symbol = symbol, Price = price, LastUpdated = DateTime.Now };
-                _context.Stocks.Add(stock);
-                await _context.SaveChangesAsync();
-                return $"Success: {symbol} saved at price {price}.";
+                var priceString = priceElement.GetString();
+                // NumberStyles ve InvariantCulture kullanarak '.' ayracını her dilde doğru okuyoruz.
+                if (decimal.TryParse(priceString, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal price))
+                {
+                    var stock = new Stock { Symbol = symbol, Price = price, LastUpdated = DateTime.Now };
+                    _context.Stocks.Add(stock);
+                    await _context.SaveChangesAsync();
+                    return $"Success: {symbol} saved at price {price}.";
+                }
             }
         }
         return "Limit reached or invalid symbol.";
     }
 
-    // Analitik Görünüm: Tüm hisseleri fiyata göre listeleme
-    public async Task<List<Stock>> GetAllStocksAsync()
+    // Analitik Görünüm: Verileri çekip DTO'ya dönüştürerek fiyata göre sıralar
+    public async Task<List<StockDto>> GetAllStocksAsync()
     {
-        // SQLite decimal sıralamayı desteklemediği için önce veriyi çekip 
-        // sıralamayı uygulama tarafında (C# tarafında) yapıyoruz.
+        // SQLite decimal sıralamayı doğrudan desteklemediği için önce listeyi alıyoruz.
         var stocks = await _context.Stocks.ToListAsync();
-        return stocks.OrderByDescending(s => s.Price).ToList();
+        
+        // Stock modelini StockDto modeline "map"liyoruz (dönüştürüyoruz)
+        return stocks
+            .OrderByDescending(s => s.Price)
+            .Select(s => new StockDto 
+            {
+                Symbol = s.Symbol,
+                Price = s.Price,
+                LastUpdated = s.LastUpdated
+            })
+            .ToList();
     }
+
     // 3. Veri Silme
     public async Task<bool> DeleteStockAsync(int id)
     {

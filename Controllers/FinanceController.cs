@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RasyonetStaj.Services;
+using RasyonetStaj.Models; // 1. EKSİK: StockDto'yu tanımak için gerekli
 
 namespace RasyonetStaj.Controllers;
 
@@ -14,7 +15,7 @@ public class FinanceController : ControllerBase
         _stockService = stockService;
     }
 
-    // 1. Veri Çekme (POST) - Mevcut metodun
+    // 1. Veri Çekme (POST)
     [HttpPost("fetch/{symbol}")]
     public async Task<IActionResult> FetchStock(string symbol)
     {
@@ -23,16 +24,14 @@ public class FinanceController : ControllerBase
     }
 
     // 2. Analitik Görünüm: Tüm verileri listeleme (GET)
-    // Hocanın 'Analytical/Aggregation' şartını bu karşılayacak.
-    [HttpGet("all")]
-    public async Task<IActionResult> GetAll()
+    [HttpGet("all")] // BURAYI TEKE DÜŞÜRDÜK
+    public async Task<ActionResult<List<StockDto>>> GetAll()
     {
         var stocks = await _stockService.GetAllStocksAsync();
         return Ok(stocks);
     }
 
     // 3. Veri Silme (DELETE)
-    // CRUD döngüsünü tamamlamak ve endpoint sayısını artırmak için.
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
