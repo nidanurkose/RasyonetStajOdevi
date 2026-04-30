@@ -1,9 +1,12 @@
+using Microsoft.EntityFrameworkCore;
 using RasyonetStaj.Data;
 using RasyonetStaj.Models;
 using System.Text.Json;
 
 namespace RasyonetStaj.Services;
 
+// DESIGN PATTERN: Service Pattern & Dependency Injection
+// Why: Business logic is separated from the controller to ensure 'Separation of Concerns'.
 public class StockService
 {
     private readonly AppDbContext _context;
@@ -14,14 +17,13 @@ public class StockService
     {
         _context = context;
         _httpClient = httpClient;
-        _apiKey = config["ApiKey"] ?? "demo";
+        _apiKey = config["ApiKey"] ?? "demo"; // appsettings.json'dan API anahtarını alır
     }
 
+    // 1. Dışarıdan Veri Çekme ve Kaydetme
     public async Task<string> FetchAndSaveStockAsync(string symbol)
     {
-        // Hocanın istediği Alpha Vantage API adresi
         var url = $"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
-        
         var response = await _httpClient.GetStringAsync(url);
         using var doc = JsonDocument.Parse(response);
         
@@ -30,18 +32,28 @@ public class StockService
             var priceString = quote.GetProperty("05. price").GetString();
             if (decimal.TryParse(priceString, out decimal price))
             {
-                var stock = new Stock
-                {
-                    Symbol = symbol,
-                    Price = price,
-                    LastUpdated = DateTime.Now
-                };
-
+                var stock = new Stock { Symbol = symbol, Price = price, LastUpdated = DateTime.Now };
                 _context.Stocks.Add(stock);
                 await _context.SaveChangesAsync();
-                return $"Başarıyla kaydedildi: {symbol} - {price}";
+                return $"Success: {symbol} saved at price {price}.";
             }
         }
-        return "Veri çekilemedi. API günlük limitine takılmış olabilir.";
+        return "Limit reached or invalid symbol.";
+    }
+
+    // 2. Analitik Görünüm: Tüm hisseleri fiyata göre listeleme
+    public async Task<List<Stock>> GetAllStocksAsync()
+    {
+        return await _context.Stocks.OrderByDescending(s => s.Price).ToListAsync();
+    }
+
+    // 3. Veri Silme
+    public async Task<bool> DeleteStockAsync(int id)
+    {
+        var stock = await _context.Stocks.FindAsync(id);
+        if (stock == null) return false;
+        _context.Stocks.Remove(stock);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }
