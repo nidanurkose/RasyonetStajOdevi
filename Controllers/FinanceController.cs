@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using RasyonetStaj.Services;
-using RasyonetStaj.Models; // 1. EKSİK: StockDto'yu tanımak için gerekli
+using RasyonetStaj.Models;
 
 namespace RasyonetStaj.Controllers;
 
@@ -15,15 +15,22 @@ public class FinanceController : ControllerBase
         _stockService = stockService;
     }
 
-    // 1. Veri Çekme (POST)
+    // Veri Çekme (POST)
     [HttpPost("fetch/{symbol}")]
     public async Task<IActionResult> FetchStock(string symbol)
     {
-        var result = await _stockService.FetchAndSaveStockAsync(symbol.ToUpper());
-        return Ok(result);
+        try 
+        {
+            var result = await _stockService.FetchAndSaveStockAsync(symbol.ToUpper());
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return Problem("An error occurred while fetching data. Please try again later.");
+        }
     }
 
-    // 2. Analitik Görünüm: Tüm verileri listeleme (GET)
+    // Tüm verileri listeleme (GET)
     [HttpGet("all")] // BURAYI TEKE DÜŞÜRDÜK
     public async Task<ActionResult<List<StockDto>>> GetAll()
     {
@@ -31,7 +38,7 @@ public class FinanceController : ControllerBase
         return Ok(stocks);
     }
 
-    // 3. Veri Silme (DELETE)
+    // Veri Silme (DELETE)
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
