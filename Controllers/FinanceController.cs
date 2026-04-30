@@ -24,7 +24,7 @@ public class FinanceController : ControllerBase
             var result = await _stockService.FetchAndSaveStockAsync(symbol.ToUpper());
             return Ok(result);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Problem("An error occurred while fetching data. Please try again later.");
         }
