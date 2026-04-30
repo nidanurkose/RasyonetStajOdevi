@@ -2,13 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using RasyonetStaj.Data;
 using RasyonetStaj.Models;
 using System.Text.Json;
-using System.Linq; // 1. EKSİK: LINQ metodları için gerekli
-using System.Globalization; // 2. EKSİK: Noktalı sayıları doğru okumak için gerekli
+using System.Linq; 
+using System.Globalization;
 
 namespace RasyonetStaj.Services;
 
 // DESIGN PATTERN: Service Pattern & Dependency Injection
-// Why: Business logic is separated from the controller to ensure 'Separation of Concerns'.
 public class StockService
 {
     private readonly AppDbContext _context;
@@ -22,7 +21,7 @@ public class StockService
         _apiKey = config["ApiKey"] ?? "demo"; 
     }
 
-    // 1. Dışarıdan Veri Çekme ve Kaydetme
+    // Dışarıdan Veri Çekme ve Kaydetme
     public async Task<string> FetchAndSaveStockAsync(string symbol)
     {
         var url = $"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
@@ -47,13 +46,12 @@ public class StockService
         return "Limit reached or invalid symbol.";
     }
 
-    // Analitik Görünüm: Verileri çekip DTO'ya dönüştürerek fiyata göre sıralar
+    // Verileri çekip DTO'ya dönüştürerek fiyata göre sıralar
     public async Task<List<StockDto>> GetAllStocksAsync()
     {
         // SQLite decimal sıralamayı doğrudan desteklemediği için önce listeyi alıyoruz.
         var stocks = await _context.Stocks.ToListAsync();
         
-        // Stock modelini StockDto modeline "map"liyoruz (dönüştürüyoruz)
         return stocks
             .OrderByDescending(s => s.Price)
             .Select(s => new StockDto 
@@ -65,7 +63,7 @@ public class StockService
             .ToList();
     }
 
-    // 3. Veri Silme
+    // Veri Silme
     public async Task<bool> DeleteStockAsync(int id)
     {
         var stock = await _context.Stocks.FindAsync(id);
