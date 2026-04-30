@@ -41,12 +41,14 @@ public class StockService
         return "Limit reached or invalid symbol.";
     }
 
-    // 2. Analitik Görünüm: Tüm hisseleri fiyata göre listeleme
+    // Analitik Görünüm: Tüm hisseleri fiyata göre listeleme
     public async Task<List<Stock>> GetAllStocksAsync()
     {
-        return await _context.Stocks.OrderByDescending(s => s.Price).ToListAsync();
+        // SQLite decimal sıralamayı desteklemediği için önce veriyi çekip 
+        // sıralamayı uygulama tarafında (C# tarafında) yapıyoruz.
+        var stocks = await _context.Stocks.ToListAsync();
+        return stocks.OrderByDescending(s => s.Price).ToList();
     }
-
     // 3. Veri Silme
     public async Task<bool> DeleteStockAsync(int id)
     {
